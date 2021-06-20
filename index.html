@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1"/>
+        <title>Exchange Crypto via ChangeNow.io</title>
+        <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+        <script type="application/javascript">
+            var apiKey;
+            var xtick;
+            var tickers;
+            var xch;
+            var four;
+            var txn;
+            var target_address;
+            var btc_spend;
+            var btc_refund;
+            var txn_status_uri;
+            var msgText;
+            var interval;
+            var txn_status_response;
+            var status;
+            var status_interval;
+            var source_rate;
+            var xint;
+            var valid_pairs;
+            function x_rate_interval(){
+                get_exchange_rates();
+                if(typeof(xint) != "undefined"){
+                    clearInterval(xint);
+                }
+                xint = setInterval(get_exchange_rates,5000);
+            }
+            function onChangeCallback(){
+                xch = document.getElementById("exchange").value;
+                x_rate_interval();
+            }
+            function forOnChange(){
+                four = document.getElementById("for").value;
+                x_rate_interval();
+            }
+            function onClickUsd(){
+                document.getElementById("selectcrypto").checked = false;
+                document.getElementById("rate").innerText = '$' + parseFloat(btcrate).toFixed(2);
+            }
+            function onClickCrypto(){
+                document.getElementById("selectusd").checked = false;
+                defer(function(){
+                    document.getElementById("rate").innerText = parseFloat((btcrate / source_rate)).toFixed(8) + ' ' + tickers.filter((a)=>{return(a.ticker.match(xch));})[0].name;
+                },(parseFloat((btcrate / source_rate)).toFixed(8) != 'NaN'))
+            }
+            function copyToClipboard(id,buttonid){
+                var ta = document.createElement("textarea");
+                ta.id = "neek";
+                ta.style.opacity = 0.01;
+                ta.style.height = 0;
+                ta.style.position = 'absolute';
+                ta.style.zindex =  -1;
+                ta.value = document.getElementById(id).innerText;
+                document.body.appendChild(ta);
+                document.getElementById("neek").select();
+                document.execCommand("copy");
+                setTimeout(function(){
+                    document.body.removeChild(document.getElementById("neek"));
+                    document.getElementById(buttonid).style.backgroundColor = "purple";
+                    document.getElementById(buttonid).style.color = "white";
+                    document.getElementById(buttonid).innerText = "COPIED";
+                    setTimeout(function(){
+                        document.getElementById(buttonid).style.backgroundColor = "chartreuse";
+                        document.getElementById(buttonid).style.color = "black";
+                        document.getElementById(buttonid).innerText = "COPY";
+                    },5000);
+                },200);
+            }
+            function check_if_finished(){
+                if(typeof(status) != "undefined"){
+                    if(status.match("finished")){
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            function defer(method,condition){
+                if(condition){
+                    method()
+                } else {
+                    setTimeout(()=>{defer(method,condition);},100);
+                }
+            }
+            function get_txn_status(){
+                $.ajax({
+                    type: "GET",
+                    url: txn_status_uri,
+                    data : {format : 'plain'},
+                    success: function(response) {
+                        if (!response){
+                            return;
+                        }
+                        txn_status_response = response.status;
+                        if(typeof(status) != "undefined"){
+                            if(!status.match(txn_status_response)){
+                                status = txn_status_response;
+                            } else {
+                                status = status;
+                            }
+                        } else {
+                            status = txn_status_response;
+                        }
+                        document.getElementById("txn_status_indicator").innerHTML = status;
+                        defer(function(){
+                            clearInterval(interval);
+                            clearInterval(status_interval);
+                            document.getElementById("formtable").style.display = "none";
+                            document.getElementById("loading").style.display = "none";
+                            document.getElementById("complete").style.display = "block";
+                            document.getElementById("completionmsg").innerHTML = "Transaction completed!<br/>You've successfully sent <b style=\"color: yellow;\">" + btc_spend + "</b> " + document.getElementById("exchange").value.toUpperCase() + " to " + document.getElementById("for").value.toUpperCase() + " address <b style=\"color: yellow;\">" + target_address + "</b>";
+                        },check_if_finished());
+                    }
+                });
+            }
+            function submitTransaction(){
+                xch = document.getElementById("exchange").value;
+                four = document.getElementById("for").value;
+                apiKey = document.getElementById("apikey").value;
+                var pair = xch + '_' + four;
+                if(valid_pairs.filter(function(a){ return a.match("^" + pair + "$"); })){
+                    if(document.getElementById("targetaddr").value.length > 0 & document.getElementById("btcspend").value.toString().length > 0 & document.getElementById("btcrefund").value.length > 0 & apiKey.length > 0){
+                        target_address = document.getElementById("targetaddr").value;
+                        btc_spend = document.getElementById("btcspend").value;
+                        btc_refund = document.getElementById("btcrefund").value;
+                        document.getElementById("formtable").style.display = "none";
+                        document.getElementById("loading").style.display = "block";
+                        document.getElementById("complete").style.display = "none";
+                        var settings = {
+                            "url": "https://api.changenow.io/v1/transactions/" + apiKey,
+                            "method": "POST",
+                            "timeout": 0,
+                            "headers": {
+                                "Content-Type": "application/json"
+                            },
+                            "data": JSON.stringify({
+                                "from": xch,
+                                "to": four,
+                                "address": document.getElementById("targetaddr").value,
+                                "amount": document.getElementById("btcspend").value,
+                                "extraId": "",
+                                "userId": "",
+                                "contactEmail": "nstevens@nanick.org",
+                                "refundAddress": document.getElementById("btcrefund").value,
+                                "refundExtraId": ""
+                            }),
+                        };
+                        $.ajax(settings).done(function (response) {
+                            if (!response){
+                                return;
+                            }
+                            txn = response;
+                            txn_status_uri = "https://changenow.io/api/v1/transactions/" + txn.id + "/a1887d328de0b1ccd393973d2affe59bb541df687fd0ad3b60f360e639ab49c9";
+                            msgText = "ChangeNow is listening for your transaction.<br/>Please send exactly:<br/> <table><colgroup><col/><col/></colgroup><tbody><tr><td><button name=\"spend\" id=\"spend\" onclick=\"copyToClipboard('amt','spend');\">COPY</button></td><td><b style=\"color: yellow;\" id=\"amt\">" + btc_spend + "</b> " + document.getElementById("exchange").value.toUpperCase() + " to </td></tr><tr><td><button name=\"pay\" id=\"pay\" onclick=\"copyToClipboard('payin','pay');\">COPY</button></td><td><b style=\"color: yellow;\" id=\"payin\">" + txn.payinAddress + "</b></td></tr></tbody></table>";
+                            document.getElementById("msg").innerHTML = msgText;
+                            var i = 0;
+                            var c = document.getElementById("myCanvas");
+                            interval = setInterval(function(){
+                                var w = document.scrollingElement.offsetWidth - 100;
+                                c.width = w;
+                                var ctx = c.getContext("2d");
+                                ctx.clearRect(0,0,c.width,c.height);
+                                ctx.beginPath();
+                                ctx.fillStyle = "#0000FF";
+                                ctx.fillRect(i, 0, 100, 30);
+                                ctx.stroke();
+                                i = i + 3;
+                                if(i >= w){ i = 0; };
+                            },10);
+                            status_interval = setInterval(get_txn_status,1000);
+                        });
+                    } else {
+                        document.getElementById("errors").style.display = "block";
+                        setTimeout(function(){
+                            document.getElementById("errors").style.display = "none";
+                        },5000);
+                    }
+                } else {
+                    document.getElementById("error2").style.display = "block";
+                    setTimeout(function(){
+                        document.getElementById("error2").style.display = "none";
+                    },5000);
+                }
+            }
+            function get_exchange_rates(){
+                if(typeof(xch) == "undefined"){
+                    xch = 'btc';
+                }
+                if(typeof(four) == "undefined"){
+                    four = 'btc';
+                }
+                $.get(
+                    "https://api.coinbase.com/v2/exchange-rates?currency=" + xch,
+                    function(response){
+                        if(!response){
+                            return;
+                        }
+                        source_rate = response.data.rates.USD;
+                    }
+                );
+                $.get(
+                    "https://api.coinbase.com/v2/exchange-rates?currency=" + four,
+                    function(response){
+                        if(!response){
+                            return;
+                        }
+                        btcrate = response.data.rates.USD;
+                    }
+                );
+                setTimeout(function(){
+                    if(document.getElementById("selectcrypto").checked){
+                        document.getElementById("rate").innerText = parseFloat((btcrate / source_rate)).toFixed(8) + ' ' + tickers.filter((a)=>{return(a.ticker.match(xch));})[0].name;
+                        document.getElementById("usd").value = parseFloat(document.getElementById("btcspend").value * source_rate).toFixed(2);
+                    }
+                    if(document.getElementById("selectusd").checked){
+                        document.getElementById("rate").innerText = '$' + parseFloat(btcrate).toFixed(2);
+                        document.getElementById("btcspend").value = parseFloat(document.getElementById("usd").value * (1/source_rate)).toFixed(8);
+                    }
+                    var s_tick = tickers.filter(function(a){ return (a.ticker.match("^" + xch + "$")); })[0];
+                    document.getElementById("unitsof").innerHTML = "Amount in units of " + s_tick.name;
+                    document.getElementById("crypticon").src = s_tick.image;
+                    document.getElementById("btcrefundlabel").innerHTML = s_tick.name + " refund address: ";
+                    var t_tick = tickers.filter(function(a){ return (a.ticker.match("^" + four + "$")); })[0];
+                    document.getElementById("ratename").innerHTML = "1 " + t_tick.name;
+                    document.getElementById("targetlabel").innerHTML = "Target " + t_tick.name + " address:";
+                },500);
+            }
+            document.addEventListener("DOMContentLoaded",()=>{
+                defer(
+                    function(){
+                        var settings = {
+                            "url": "https://api.changenow.io/v1/market-info/available-pairs/",
+                            "method": "GET",
+                            "timeout": 0,
+                        };
+                        $.ajax(settings).done(function (response) {
+                            valid_pairs = response;
+                        });
+                        $.ajax({
+                            type: "GET",
+                            url: "https://changenow.io/api/v1/currencies",
+                            data : {format : 'plain'},
+                            success: function(response) {
+                                if (!response){
+                                    return;
+                                }
+                                tickers = response;
+                                tickers.forEach((i)=>{
+                                    var optione = document.createElement("option");
+                                    optione.value = i.ticker;
+                                    optione.innerHTML = i.name;
+                                    document.getElementById("exchange").appendChild(optione);
+                                    var optionf = document.createElement("option");
+                                    optionf.value = i.ticker;
+                                    optionf.innerHTML = i.name;
+                                    document.getElementById("for").appendChild(optionf);
+                                });
+                            }
+                        });
+                        document.getElementById("selectusd").addEventListener("click",onClickUsd);
+                        document.getElementById("selectcrypto").addEventListener("click",onClickCrypto);
+                        document.getElementById("exchange").addEventListener("change",onChangeCallback);
+                        document.getElementById("for").addEventListener("change",forOnChange);
+                        defer(x_rate_interval,(typeof(tickers) != "undefined"));
+                        document.getElementById("usd").addEventListener("input",()=>{
+                            document.getElementById("btcspend").value = parseFloat(document.getElementById("usd").value * (1/source_rate)).toFixed(8);
+                        });
+                        document.getElementById("btcspend").addEventListener("input",()=>{
+                            document.getElementById("usd").value = parseFloat(document.getElementById("btcspend").value * source_rate).toFixed(2);
+                        });
+                    },
+                    (!(!(window.jQuery)))
+                );
+            });
+        </script>
+        <style type="text/css">
+            button {
+            	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+                background-color: chartreuse;
+                color: black;
+                display: inline;
+                font-weight: bold;
+            }
+            body {
+            	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            	color:white;
+            	background-color: black;
+            }
+            table,th,tr,td {
+            	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            	background-color: black;
+            }
+            option {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+                background-color: chartreuse;
+                color: black;
+                font-weight: bold;
+            }
+            select {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+                background-color: chartreuse;
+                color: black;
+                font-weight: bold;
+            }
+            h2 {
+                color: chartreuse;
+            }
+        </style>
+    </head>
+    <body>
+        <h2 style="text-decoration: underline;">Exchange Cryptocurrencies via <a href="https://changenow.io?link_id=dc49f0fd273c14" target="_blank">ChangeNOW.io</a></h2>
+        <h3 style="display: none; color: red; font-size: 20pt;" id="errors">All fields below are needed to complete the transaction!</h3>
+        <h3 style="display: none; color: red; font-size: 20pt;" id="error2">There is currently no support for the exchange you've chosen!</h3>
+        <div id="msgs">
+            <span style="color: white;" id="msg"></span>
+        </div>
+        <div id="formtable">
+            <table>
+                <colgroup>
+                    <col style="width: 300px"/>
+                    <col style="width: 33px"/>
+                    <col style="width: 398px"/>
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <td><label id="apilabel" for="apikey">ChangeNOW API key: </label></td>
+                        <td></td>
+                        <td><input id="apikey" name="apikey" type="text"></td>
+                    </tr>
+                    <tr>
+                        <td>Exchange:</td>
+                        <td></td>
+                        <td><select id="exchange" value="btc"></select></td>
+                    </tr>
+                    <tr>
+                        <td>For:</td>
+                        <td></td>
+                        <td><select id="for" value="btc"></select></td>
+                    </tr>
+                    <tr>
+                        <td><label id="targetlabel" for="targetaddr">Target Bitcoin address: </label></td>
+                        <td></td>
+                        <td><input name="targetaddr" id="targetaddr" type="text"></td>
+                    </tr>
+                    <tr>
+                        <td><input id="selectusd" type="radio" checked="">Amount in units of USD</td>
+                        <td><img height=32 width=32 src="https://raw.githubusercontent.com/nstevens1040/btcdonate/main/usd_icon_.png"></td>
+                        <td><input id="usd" name="usd" type="number" min="0.01" step="0.01" value=""></td>
+                    </tr>
+                    <tr>
+                        <td><span style="margin: 0px;">or</span></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><input style="display: inline;" id="selectcrypto" type="radio"><span id="unitsof">Amount in units of BTC</span></td>
+                        <td><img id="crypticon" height=32 width=32 src="https://raw.githubusercontent.com/nstevens1040/btcdonate/main/Bitcoin-BTC-icon.png"></td>
+                        <td><input id="btcspend" name="btcspend" type="number" min="0.00000001" step="0.00000001" value=""></td>
+                    </tr>
+                    <tr>
+                        <td><label id="btcrefundlabel" for="btcrefund">Bitcoin refund address: </label></td>
+                        <td></td>
+                        <td><input name="btcrefund" id="btcrefund" type="text"></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td><button name="formsubmit" id="formsubmit" onclick="submitTransaction();">SUBMIT</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <table>
+                <colgroup>
+                    <col style="width: 180px;"/>
+                    <col style="width: 33px;"/>
+                    <col style="width: 398px;"/>
+                </colgroup>
+                <tr>
+                    <td><h2 id="ratename">1 Bitcoin</h2></td>
+                    <td><h2>=</h2></td>
+                    <td><h2 id="rate"></h2></td>
+                </tr>
+            </table>
+        </div>
+        <div id="loading" style="display: none;">
+            <div style="text-align: center;">
+                <span style="text-decoration: underline; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: bold;">AWAITING TRANSACTION</span>
+            </div>
+            <div>
+                <canvas height=50px id="myCanvas"></canvas>
+            </div>
+            <div id="statusTable">
+                <table>
+                    <colgroup>
+                        <col/>
+                        <col/>
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <td style="color: yellow; font-size: 20pt;">Transaction status:</td>
+                            <td id="txn_status_indicator" style="color: chartreuse; font-size: 20pt;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="complete" style="display: none;">
+            <span id="completionmsg"></span>
+        </div>
+    </body>
+</html>
