@@ -225,7 +225,7 @@
                                 return;
                             }
                             txn = response;
-                            txn_status_uri = "https://changenow.io/api/v1/transactions/" + txn.id + "/a1887d328de0b1ccd393973d2affe59bb541df687fd0ad3b60f360e639ab49c9";
+                            txn_status_uri = "https://changenow.io/api/v1/transactions/" + txn.id + apiKey;
                             msgText = "ChangeNow is listening for your transaction.<br/>Please send exactly:<br/> <table><colgroup><col/><col/></colgroup><tbody><tr><td><button name=\"spend\" id=\"spend\" onclick=\"copyToClipboard('amt','spend');\">COPY</button></td><td><b style=\"color: yellow;\" id=\"amt\">" + btc_spend + "</b> " + document.getElementById("exchange").value.toUpperCase() + " to </td></tr><tr><td><button name=\"pay\" id=\"pay\" onclick=\"copyToClipboard('payin','pay');\">COPY</button></td><td><b style=\"color: yellow;\" id=\"payin\">" + txn.payinAddress + "</b></td></tr></tbody></table>";
                             document.getElementById("msg").innerHTML = msgText;
                             var i = 0;
@@ -336,13 +336,14 @@
                                     }
                                     document.getElementById("for").appendChild(optionf);
                                 });
+                                x_rate_interval();
                             }
                         });
                         document.getElementById("selectusd").addEventListener("click",onClickUsd);
                         document.getElementById("selectcrypto").addEventListener("click",onClickCrypto);
                         document.getElementById("exchange").addEventListener("change",onChangeCallback);
                         document.getElementById("for").addEventListener("change",forOnChange);
-                        defer(x_rate_interval,(typeof(tickers) != "undefined"));
+                        //defer(x_rate_interval,(typeof(tickers) != "undefined"));
                         document.getElementById("usd").addEventListener("input",()=>{
                             document.getElementById("btcspend").value = parseFloat(document.getElementById("usd").value * (1/source_rate)).toFixed(8);
                         });
@@ -395,7 +396,7 @@
         </style>
     </head>
     <body>
-        <h2 style="text-decoration: underline;">Exchange Cryptocurrencies via <a href="https://changenow.io?link_id=dc49f0fd273c14" target="_blank">ChangeNOW.io</a></h2>
+        <h2 style="text-decoration: underline;">Exchange Cryptocurrencies via <a href="https://changenow.io?link_id=dc49f0fd273c14" target="_blank" title="ChangeNOW | Crypto Exchange | Fast BTC to ETH, XRP, BCH, XMR, NEO Exchange">ChangeNOW.io</a></h2>
         <h3 style="display: none; color: red; font-size: 20pt;" id="errors">All fields below are needed to complete the transaction!</h3>
         <h3 style="display: none; color: red; font-size: 20pt;" id="error2">There is currently no support for the exchange you've chosen!</h3>
         <div id="msgs">
