@@ -215,7 +215,7 @@
                                 "amount": document.getElementById("btcspend").value,
                                 "extraId": "",
                                 "userId": "",
-                                "contactEmail": "nstevens@nanick.org",
+                                "contactEmail": document.getElementById("email").value,
                                 "refundAddress": document.getElementById("btcrefund").value,
                                 "refundExtraId": ""
                             }),
@@ -324,10 +324,16 @@
                                     var optione = document.createElement("option");
                                     optione.value = i.ticker;
                                     optione.innerHTML = i.name;
+                                    if(i.name == "Bitcoin"){
+                                        optione.setAttribute('selected','selected');
+                                    }
                                     document.getElementById("exchange").appendChild(optione);
                                     var optionf = document.createElement("option");
                                     optionf.value = i.ticker;
                                     optionf.innerHTML = i.name;
+                                    if(i.name == "Bitcoin"){
+                                        optionf.setAttribute('selected','selected');
+                                    }
                                     document.getElementById("for").appendChild(optionf);
                                 });
                             }
@@ -404,6 +410,11 @@
                 </colgroup>
                 <tbody>
                     <tr>
+                        <td><label id="emailLabel" for="email">Contact email address: </label></td>
+                        <td></td>
+                        <td><input id="email" name="email" type="text"></td>
+                    </tr>
+                    <tr>
                         <td><label id="apilabel" for="apikey">ChangeNOW API key: </label></td>
                         <td></td>
                         <td><input id="apikey" name="apikey" type="text"><a class="needone" target="_blank" href="https://changenow.io/affiliate" title="Don't have a ChangeNOW API key? Click here to get one.">Need one?</a></td>
@@ -411,12 +422,12 @@
                     <tr>
                         <td>Exchange:</td>
                         <td></td>
-                        <td><select id="exchange" value="btc"></select></td>
+                        <td><select id="exchange"></select></td>
                     </tr>
                     <tr>
                         <td>For:</td>
                         <td></td>
-                        <td><select id="for" value="btc"></select></td>
+                        <td><select id="for"></select></td>
                     </tr>
                     <tr>
                         <td><label id="targetlabel" for="targetaddr">Target Bitcoin address: </label></td>
