@@ -225,7 +225,7 @@
                                 return;
                             }
                             txn = response;
-                            txn_status_uri = "https://changenow.io/api/v1/transactions/" + txn.id + apiKey;
+                            txn_status_uri = "https://changenow.io/api/v1/transactions/" + txn.id + "/" + apiKey;
                             msgText = "ChangeNow is listening for your transaction.<br/>Please send exactly:<br/> <table><colgroup><col/><col/></colgroup><tbody><tr><td><button name=\"spend\" id=\"spend\" onclick=\"copyToClipboard('amt','spend');\">COPY</button></td><td><b style=\"color: yellow;\" id=\"amt\">" + btc_spend + "</b> " + document.getElementById("exchange").value.toUpperCase() + " to </td></tr><tr><td><button name=\"pay\" id=\"pay\" onclick=\"copyToClipboard('payin','pay');\">COPY</button></td><td><b style=\"color: yellow;\" id=\"payin\">" + txn.payinAddress + "</b></td></tr></tbody></table>";
                             document.getElementById("msg").innerHTML = msgText;
                             var i = 0;
